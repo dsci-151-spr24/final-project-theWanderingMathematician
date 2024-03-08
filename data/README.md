@@ -16,7 +16,7 @@ A 7,966 row by 21 column dataframe
 - `peak_frequency`: The dominant frequency at the peak of the event.
 - `central_freq`: The central frequency at the peak of the event
 - `bandwidth`: The distance between the lowest-frequency and highest-frequency points of the event
-- `amplitude`: The amplitude (strength) of the event
+- `amplitude`: The amplitude of the event
 - `snr`: The signal-to-noise ratio of the event; a measurement of how loud the event is, defined as the strength of the signal over the strength of the background noise.
 - `gravityspy_id`: The ID of the event on the Gravity Spy citizen science project, which can be used to access the metadata of the event on [the Gravity Spy tools page](https://gravityspytools.ciera.northwestern.edu/).
 - `label`: The glitch class that the event was classified as.
