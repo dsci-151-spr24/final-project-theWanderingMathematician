@@ -1,6 +1,6 @@
 ---
 title: "Project proposal"
-author: "Your name"
+author: "Micaiah Balonek"
 output: github_document
 ---
 
@@ -15,6 +15,14 @@ library(broom)
 
 ## 2. Data
 
+```{r glimpse-GS-data, warning=FALSE}
+
+setwd("/cloud/project/data")
+trainingset_v1d1_metadata <- read_csv("trainingset_v1d1_metadata.csv") %>%
+  select(-c(8, 9, 14, 17, 18, 19, 20)) %>%
+  mutate(phase = param_one_value, .keep = "unused")
+glimpse(trainingset_v1d1_metadata)
+```
 
 
 ## 3. Data analysis plan
