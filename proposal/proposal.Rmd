@@ -11,7 +11,10 @@ library(broom)
 
 ## 1. Introduction
 
+In this project, we are analysing data from the LIGO detectors; specifically, we are looking at the waveforms corresponding to glitches in these detectors, classified into categories by a machine learning system trained on the responses of citizen scientists in the Gravity Spy project.
+This dataset contains the metadata connected to each glitch, along with the glitch class that it was classified into; each glitch can be visualised on a spectrogram as a shape in the three-dimensional time-amplitude-frequency space, which is what the machine learning classifies it based on. The data includes four of these spectrograms for each glitch, identical except for what length of time they represent, in the format of the Gravity Spy project. The data therefore includes variables such as the peak and central frequencies, the bandwidths, phase, and the duration of these glitches, but also provides a few measures of the strength of the glitch: not only the simple amplitude value, but also the signal-to-noise ratio (SNR) of each signal and the gravity spy ID number. Many columns were also provided which were entirely filled with one value, which I have decided to leave out of the descriptions, since they are of no consequence to the rest of the data.
 
+Here we will be analysing the different classes of glitches according to the different to attempt to see if we can find a combination of the other parameters (bandwidth, peak and central frequencies, duration, and snr) which can provide splits which approximate the machine learning's classification scheme. 
 
 ## 2. Data
 

@@ -9,6 +9,31 @@ library(broom)
 
 ## 1. Introduction
 
+In this project, we are analysing data from the LIGO detectors;
+specifically, we are looking at the waveforms corresponding to glitches
+in these detectors, classified into categories by a machine learning
+system trained on the responses of citizen scientists in the Gravity Spy
+project. This dataset contains the metadata connected to each glitch,
+along with the glitch class that it was classified into; each glitch can
+be visualised on a spectrogram as a shape in the three-dimensional
+time-amplitude-frequency space, which is what the machine learning
+classifies it based on. The data includes four of these spectrograms for
+each glitch, identical except for what length of time they represent, in
+the format of the Gravity Spy project. The data therefore includes
+variables such as the peak and central frequencies, the bandwidths,
+phase, and the duration of these glitches, but also provides a few
+measures of the strength of the glitch: not only the simple amplitude
+value, but also the signal-to-noise ratio (SNR) of each signal and the
+gravity spy ID number. Many columns were also provided which were
+entirely filled with one value, which I have decided to leave out of the
+descriptions, since they are of no consequence to the rest of the data.
+
+Here we will be analysing the different classes of glitches according to
+the different to attempt to see if we can find a combination of the
+other parameters (bandwidth, peak and central frequencies, duration, and
+snr) which can provide splits which approximate the machine learning’s
+classification scheme.
+
 ## 2. Data
 
 ``` r
@@ -54,28 +79,5 @@ glimpse(trainingset_v1d1_metadata)
     ## $ url3           <chr> "https://panoptes-uploads.zooniverse.org/production/sub…
     ## $ url4           <chr> "https://panoptes-uploads.zooniverse.org/production/sub…
     ## $ phase          <dbl> -2.72902, 1.10682, -0.83099, 0.76242, -0.31161, 1.56686…
-
-``` r
-trainingset_v1d1_metadata
-```
-
-    ## # A tibble: 7,966 × 21
-    ##     event_time ifo    peak_time peak_time_ns start_time start_time_ns duration
-    ##          <dbl> <chr>      <dbl>        <dbl>      <dbl>         <dbl>    <dbl>
-    ##  1 1134216193. L1    1134216192    931639909 1134216192     832031011   0.188 
-    ##  2 1129359782. L1    1129359781    558593034 1129359781      47851085   0.942 
-    ##  3 1127425469. L1    1127425468    976317882 1127425468     960937023   0.0469
-    ##  4 1132636755. L1    1132636755    365233898 1132636754     951172113   0.824 
-    ##  5 1132035853. L1    1132035853    197264909 1132035852     933837890   2.00  
-    ##  6 1163421592. H1    1163421591    621093034 1163421591     492187023   0.383 
-    ##  7 1135086850. L1    1135086850    427246093 1135086850     310547113   0.703 
-    ##  8 1136285263. L1    1136285262    929687023 1136285262        976085   1.62  
-    ##  9 1132651217. L1    1132651216    955077886 1132651216             0   1.25  
-    ## 10 1132637477. L1    1132637476    677733898 1132637476     342772960   0.743 
-    ## # ℹ 7,956 more rows
-    ## # ℹ 14 more variables: event_id <dbl>, peak_frequency <dbl>,
-    ## #   central_freq <dbl>, bandwidth <dbl>, amplitude <dbl>, snr <dbl>,
-    ## #   gravityspy_id <chr>, label <chr>, sample_type <chr>, url1 <chr>,
-    ## #   url2 <chr>, url3 <chr>, url4 <chr>, phase <dbl>
 
 ## 3. Data analysis plan
