@@ -42,6 +42,10 @@ machine learning’s classification scheme.
 
 ## 2. Data
 
+Here, we load the data from the .csv file in the data folder into R as
+the `gravity_spy_metadata` dataframe, and remove several columns that
+have no use in any analysis of this data.
+
     ## Rows: 7,966
     ## Columns: 21
     ## $ event_time     <dbl> 1134216193, 1129359782, 1127425469, 1132636755, 1132035…
@@ -79,11 +83,13 @@ to truly replicate this classification scheme.
 
 To start our preliminary analysis of the data, we plot how common each
 of these glitches are compared to eachother in each interferometer:
-![](proposal_files/figure-gfm/glitch-frequency-1.png)<!-- --> First of
-all, we can see that several glitch classes are specific to each
-interferometer (although some may just have few enough examples that
-they don’t show up in this graph). Another interesting thing to see is
-that Hanford generally has more glitches than Livingston, and that
+
+![](proposal_files/figure-gfm/glitch-frequency-1.png)<!-- -->
+
+First of all, we can see that several glitch classes are specific to
+each interferometer (although some may just have few enough examples
+that they don’t show up in this graph). Another interesting thing to see
+is that Hanford generally has more glitches than Livingston, and that
 Blips, Koi Fish, and Low-Frequency Bursts appear to be the glitches with
 the most examples. To see whether this is accurate, we will now
 calculate summary statistics for each glitch class. The following
@@ -140,6 +146,7 @@ To begin our analysis of the data points themselves (other than just the
 averages for each glitch class) we plot out `bandwidth` by `duration`,
 with the colour of the points representing the label, to see how well we
 can group glitch classes by the general dimensions of the signal:
+
 ![](proposal_files/figure-gfm/bandwidth-duration-plot-1.png)<!-- -->
 
 This image is a bit hard to read, since the labels take up so much room,
@@ -151,6 +158,7 @@ assorted other colours) at the very bottom. Zooming in on the y-axis to
 glitches with durations less than 5 seconds gives us the following plot:
 
 ![](proposal_files/figure-gfm/bandwidth-duration-plot-zoomed-1.png)<!-- -->
+
 With this zoomed-in visualisation, we can see that the data has some
 artefacts, causing the values to line up on a grid; ignoring this,
 however, we notice the large cluster of green “Blip”-type glitches at
@@ -210,6 +218,7 @@ our graph to these types of glitches to get a better look at their
 distributions, we get the following graph:
 
 ![](proposal_files/figure-gfm/peakFreq-log-plot-bliplike-1.png)<!-- -->
+
 Here, we can tell that Light Modulation has data points all across the
 graph, from around (1000, 0) to around (11, 5), while Tomtes are fairly
 localised between (32, 0) and (64, 1.3), with few exceptions. Helices

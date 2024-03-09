@@ -26,6 +26,8 @@ Here we will be analysing the different classes of glitches according to the dif
 
 ## 2. Data
 
+Here, we load the data from the .csv file in the data folder into R as the `gravity_spy_metadata` dataframe, and remove several columns that have no use in any analysis of this data.
+
 ```{r glimpse-GS-data}
 
 setwd("/cloud/project/data")
@@ -42,6 +44,7 @@ Our predictor variables are `bandwidth`, `peak frequency`, `central frequency`, 
 
 ### Data summary
 To start our preliminary analysis of the data, we plot how common each of these glitches are compared to eachother in each interferometer:
+
 ```{r glitch-frequency}
 customGlitchColour <- c("#ff0000", "#ff8800", "#ffff00","#88ff00", "#00ff00", "#00ffff", "#0088ff", "#0000ff", "#8800ff", "#ff00ff", "#ff0088", "#ffffff", "#aaaaaa", "#ff88bb", "#ffbb88", "#ffff88","#bbff88", "#88ffff", "#88bbff", "#8888ff", "#bb88ff", "#ff88ff")
 gravity_spy_metadata %>%
@@ -50,6 +53,7 @@ gravity_spy_metadata %>%
     geom_bar(position = "stack") +
     labs(title = "Glitch frequency", subtitle = "in each of the LIGO interferometers", fill = "Glitch class", x = "interferometer")
 ```
+
 First of all, we can see that several glitch classes are specific to each interferometer (although some may just have few enough examples that they don't show up in this graph). Another interesting thing to see is that Hanford generally has more glitches than Livingston, and that Blips, Koi Fish, and Low-Frequency Bursts appear to be the glitches with the most examples. To see whether this is accurate, we will now calculate summary statistics for each glitch class. The following summary statistics include the number of glitches of that class detected in each interferometer (columns `n_H1` and `n_L1`) and the means of each of the predictor variables for each class.
 
 ```{r glitch-class-stats}
@@ -72,6 +76,7 @@ From this summary data, we can see that the Machine Learning system has classed 
 ### Preliminary Analysis
 
 To begin our analysis of the data points themselves (other than just the averages for each glitch class) we plot out `bandwidth` by `duration`, with the colour of the points representing the label, to see how well we can group glitch classes by the general dimensions of the signal:
+
 ```{r bandwidth-duration-plot}
 gravity_spy_metadata %>%
   ggplot(aes(y = duration, x = bandwidth, colour = label)) +
@@ -94,6 +99,7 @@ gravity_spy_metadata %>%
     labs(title = "Glitch classes by duration and bandwidth", subtitle = "Restricted to those with durations <= 5s", colour = "Glitch class") +
     ylim(0, 5)
 ```
+
 With this zoomed-in visualisation, we can see that the data has some artefacts, causing the values to line up on a grid; ignoring this, however, we notice the large cluster of green "Blip"-type glitches at the bottom, especially prominent in the bottom-left corner, as well as two major populations of 1080-Lines: one forming linear patterns in the lower-right-hand corner of the distribution, and the other one being around the left-hand side of the blip distribution. We also see a population of either violin modes or wandering lines in the center of the lower edge of the plot, its density peaking at bandwidths between 3000 and 4000. We also now see that there are many Koi Fish glitches spread through the background distribution, which we mixed in with the colour of the low-frequency bursts and lines in our earlier analysis. The last notable point that stands out in this graph is the fact that Koi fish and Low Frequency Bursts seem to dominate for most of the chart, with assorted scattered-light glitches among them as well.
 
 Meanwhile, if we instead plot peak frequency by duration (using the same limit on duration), we get the following graph:
@@ -158,6 +164,7 @@ gravity_spy_metadata %>%
     ylim(0, 5) +
     scale_x_continuous(transform = "log2", n.breaks = 10)
 ```
+
 Here, we can tell that Light Modulation has data points all across the graph, from around (1000, 0) to around (11, 5), while Tomtes are fairly localised between (32, 0) and (64, 1.3), with few exceptions. Helices are indeed clustered in the center of the Blip cluster, which is in most cases visibly seperate from the Koi Fish cluster, with Scratchy glitches being found throughout both of these.
 
 
