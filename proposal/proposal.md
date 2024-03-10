@@ -74,10 +74,9 @@ have no use in any analysis of this data.
 
 Our predictor variables are `bandwidth`, `peak frequency`,
 `central frequency`, `duration`, and `snr`, while our outcome variable
-will be the grouping system of `label`; however, realistically, the
-outcome will be merely the closest approximation found to the ML’s
-classification system, as it would take more complex analysis processes
-to truly replicate this classification scheme.
+will be some approximation to the grouping system of `label` (an
+approximation, because we probably won’t be able to replicate the
+categories exactly, only approximately).
 
 ### Data summary
 
@@ -123,146 +122,33 @@ of the predictor variables for each class.
     ## 21 Wandering_Line      42     0   27.8       667         2127     6.05      3929
     ## 22 Whistle              2   297    9.5      1093         2690     0.59      4788
 
-From this summary data, we can see that the Machine Learning system has
-classed several glitches into categories from the “wrong” observeratory.
-This can be explained in the following way: enough glitches happen that
-even if a certain glitch type isn’t present in one interferometer, a
-burst of noise can appear with a random shape that the ML couldn’t
-classify well into the “correct” interferometer’s categories, and which
-happens to look like a glitch from another category, and would get
-classified into that; alternatively, since “None of the Above” is a
-category, this implies that the training data (classified by citizen
-scientists) is included in this dataset, and these mistakes were human
-errors, already present in the training data. We can also see that Koi
-Fish, one of the most prominent types of glitches, is also the loudest
-standard class (other than Extremely Loud glitches, which are the
-loudest by definition), while Scratchy, Helix, and Air Compressor
-glitches are the quietest, even quieter on average than the ‘No glitch’
-category.
-
-### Preliminary Analysis
-
-To begin our analysis of the data points themselves (other than just the
-averages for each glitch class) we plot out `bandwidth` by `duration`,
-with the colour of the points representing the label, to see how well we
-can group glitch classes by the general dimensions of the signal:
+In the next plot of our preliminary analysis, we plot out `bandwidth` by
+`duration`, with the colour of the points representing the label, to see
+how well we can group glitch classes by the general dimensions of the
+signal:
 
 ![](proposal_files/figure-gfm/bandwidth-duration-plot-1.png)<!-- -->
 
-This image is a bit hard to read, since the labels take up so much room,
-and since there are so many data points on the graph; still, one can
-tell that in the lower part of the distribution the glitch population is
-dominated by the blue and purple colours of Koi Fish, Low-Frequency
-Bursts, and Low-Frequency Lines, with a sudden stripe of green (and
-assorted other colours) at the very bottom. Zooming in on the y-axis to
-glitches with durations less than 5 seconds gives us the following plot:
-
-![](proposal_files/figure-gfm/bandwidth-duration-plot-zoomed-1.png)<!-- -->
-
-With this zoomed-in visualisation, we can see that the data has some
-artefacts, causing the values to line up on a grid; ignoring this,
-however, we notice the large cluster of green “Blip”-type glitches at
-the bottom, especially prominent in the bottom-left corner, as well as
-two major populations of 1080-Lines: one forming linear patterns in the
-lower-right-hand corner of the distribution, and the other one being
-around the left-hand side of the blip distribution. We also see a
-population of either violin modes or wandering lines in the center of
-the lower edge of the plot, its density peaking at bandwidths between
-3000 and 4000. We also now see that there are many Koi Fish glitches
-spread through the background distribution, which we mixed in with the
-colour of the low-frequency bursts and lines in our earlier analysis.
-The last notable point that stands out in this graph is the fact that
-Koi fish and Low Frequency Bursts seem to dominate for most of the
-chart, with assorted scattered-light glitches among them as well.
-
-Meanwhile, if we instead plot peak frequency by duration (using the same
-limit on duration), we get the following graph:
-
-![](proposal_files/figure-gfm/peakFreq-duration-plot-1.png)<!-- -->
-
-Here, we can clearly see spikes of 1080-Hz lines and 1400-Hz ripples at
-their respective frequencies, as well as several spikes of violin modes
-at frequencies just over 1000Hz, 1500Hz, and 2000Hz, among a background
-composed mostly of Whistles. Moving into lower frequencies, we see a
-cloud of Blips underneath another blob, mostly composed of Koi Fish.
-There are several distributions of other glitches at lower frequencies
-as well, but these are harder to see clearly because of how little room
-they take up on the graph; to solve this, we use the same transformation
-as the Gravity Spy spectrograms do: taking the logarithm of the
-frequency values.
-
-![](proposal_files/figure-gfm/peakFreq-log-plot-1.png)<!-- -->
-
-In this new graph, while we can still see the high-frequency spikes, we
-can now also see many lower-frequency trends (as well as similar
-gridline textures as in the previous diagrams). One of the most
-striking, in my opinion, is the line at 20Hz that seperates the low
-frequency lines and bursts from the scattered light glitches. There is a
-similar line on the other side of the scattered light glitches which
-seperates them from most other glitches (although there is a small area
-outside this line where there are scattered lights mixed with other
-glitch types, surprisingly enough still bounded by vertical lines). I
-have outlined these areas in the following plot:
-
-![](proposal_files/figure-gfm/peakFreq-log-plot-annotated-SL-1.png)<!-- -->
-
-Moving back to the unmarked graph, we can see the 60Hz Power Line
-glitches as a line of orange-coloured points around the 60Hz-line, and
-the Air Compressor glitches as a similar, yellow line at around 45Hz. We
-also see that in this graph, blips are mostly found in a triangle from
-40Hz to 700Hz, and with durations less than 1 second, with a cluster of
-Helixes in the center. The area above this triangle has a background
-patterned with the dark blues of Koi Fish and Light Modulation, the cyan
-colour of Scratchy glitches, and the pale blue of Tomtes. Restricting
-our graph to these types of glitches to get a better look at their
-distributions, we get the following graph:
-
-![](proposal_files/figure-gfm/peakFreq-log-plot-bliplike-1.png)<!-- -->
-
-Here, we can tell that Light Modulation has data points all across the
-graph, from around (1000, 0) to around (11, 5), while Tomtes are fairly
-localised between (32, 0) and (64, 1.3), with few exceptions. Helices
-are indeed clustered in the center of the Blip cluster, which is in most
-cases visibly seperate from the Koi Fish cluster, with Scratchy glitches
-being found throughout both of these.
+This image is a bit hard to read, since there are so many data points on
+the graph and they are nearly all in the lower section of the graph;
+still, one can see that in the lower part of the distribution the glitch
+population is dominated by the colours of Koi Fish and Low-Frequency
+Bursts, except for a stripe of blips (and assorted other glitches) at
+the very bottom.
 
 ### Methods
 
 To find a good predictor of the glitch class, I think a good approach
 would be to start by finding a simple way to divide the space of all
-glitches into two to four smaller groups, each containing different sets
-of glitch classes, and then doing the same to these groups as well,
-shaving off more bits of the phase space until all groups we have
-(generally) represent either one glitch class or two significatly
-similar classes. To do this, a good strategy would be to start by
-mapping out projections from different sides of the hypersurface, and
-then look for simple linear or planar areas where the data could be
-divided, and move on to more complicated ways to split the data if those
-don’t work. This might run into some trouble with certain glitch
-classes, such as light modulation, which would be hard to create a
-single classification for, since they visually look like two seperate
-“glitchlets”, when they’re actually one, just with a gap in the center,
-as seen in the following image: ![light
-modulation](https://panoptes-uploads.zooniverse.org/production/subject_location/b82c8bd6-1932-488e-b394-b87a33f848d7.png)
-As you can see, sometimes, as here, the signal detector will trigger on
-the tall, thin, blip-like glitchlet, and the metadata will show a
-roughly blip-like glitch, while other times, it will trigger on the
-lower, wider glitchlet, which would produce metadata similar to a
-low-frequency burst. Examples of these glitches are shown below:
-
-Blip: ![Example
-blip](https://panoptes-uploads.zooniverse.org/production/subject_location/b5776a8b-0462-4c33-97df-cd4c836b471c.png)
-
-Low Frequency Burst: ![Example
-LFB](https://panoptes-uploads.zooniverse.org/production/subject_location/e6404b8b-130e-4052-8205-d31c811db502.png)
-
-In these cases, it may be impossible to characterize them, since this
-dataset doesn’t contain data on the evolution of the glitches over time
-(the contours of the shape of the glitch in time-frequency space). If
-this is true, we may have to ignore these types of glitches in our
-analysis (a similar problem may occur with repeating blips, but in that
-case, we could probably just group them together with their component
-blips, since they are composite glitches). On the other end of the
-scale, however, the “No Glitch” and “Extremely Loud” categories should
-be extremely easy to split off, with possibly only SNR being a necessary
-factor for their separation.
+glitches into smaller groups of glitch classes, and then doing the same
+to these groups as well until we have groups that represent (fairly
+well) one glitch class each. To do this, a good strategy would be to
+start by plotting graphs of each variable against the others, and then
+looking for the simplest useful way to divide the data. However, this
+might not work well for some glitch classes, such as light modulation,
+which would be hard to create a single classification for, since they
+appear looking like a Blip followed by a Low-Frequency Burst, making
+them harder to classify well, in which case, it may be impossible to
+separate them from other glitches, since this dataset doesn’t represent
+the data surrounding the glitches, only the data of the glitces
+themselves.
