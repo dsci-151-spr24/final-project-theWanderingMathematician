@@ -1,4 +1,4 @@
-Project proposal
+Analysis of data
 ================
 Micaiah Balonek
 
@@ -147,43 +147,21 @@ are indeed clustered in the center of the Blip cluster, which is in most
 cases visibly seperate from the Koi Fish cluster, with Scratchy glitches
 being found throughout both of these.
 
-### Methods
+Next, we plot out `SNR` by each of `duration` and `peak frequency`, and
+analyse the results of these graphs:
 
-To find a good predictor of the glitch class, I think a good approach
-would be to start by finding a simple way to divide the space of all
-glitches into two to four smaller groups, each containing different sets
-of glitch classes, and then doing the same to these groups as well,
-shaving off more bits of the phase space until all groups we have
-(generally) represent either one glitch class or two significatly
-similar classes. To do this, a good strategy would be to start by
-mapping out projections from different sides of the hypersurface, and
-then look for simple linear or planar areas where the data could be
-divided, and move on to more complicated ways to split the data if those
-don’t work. This might run into some trouble with certain glitch
-classes, such as light modulation, which would be hard to create a
-single classification for, since they visually look like two seperate
-“glitchlets”, when they’re actually one, just with a gap in the center,
-as seen in the following image: ![light
-modulation](https://panoptes-uploads.zooniverse.org/production/subject_location/b82c8bd6-1932-488e-b394-b87a33f848d7.png)
-As you can see, sometimes, as here, the signal detector will trigger on
-the tall, thin, blip-like glitchlet, and the metadata will show a
-roughly blip-like glitch, while other times, it will trigger on the
-lower, wider glitchlet, which would produce metadata similar to a
-low-frequency burst. Examples of these glitches are shown below:
+![](early-analysis_files/figure-gfm/snr-dura-plots-1.png)<!-- -->![](early-analysis_files/figure-gfm/snr-dura-plots-2.png)<!-- -->![](early-analysis_files/figure-gfm/snr-dura-plots-3.png)<!-- -->
 
-Blip: ![Example
-blip](https://panoptes-uploads.zooniverse.org/production/subject_location/b5776a8b-0462-4c33-97df-cd4c836b471c.png)
-
-Low Frequency Burst: ![Example
-LFB](https://panoptes-uploads.zooniverse.org/production/subject_location/e6404b8b-130e-4052-8205-d31c811db502.png)
-
-In these cases, it may be impossible to characterize them, since this
-dataset doesn’t contain data on the evolution of the glitches over time
-(the contours of the shape of the glitch in time-frequency space). If
-this is true, we may have to ignore these types of glitches in our
-analysis (a similar problem may occur with repeating blips, but in that
-case, we could probably just group them together with their component
-blips, since they are composite glitches). On the other end of the
-scale, however, the “No Glitch” and “Extremely Loud” categories should
-be extremely easy to split off, with possibly only SNR being a necessary
-factor for their separation.
+From the first plot, we can see that, while blips, koi fish, and
+Extremely Loud glitches form visually distinct categories, most of the
+other glitch classes are in the same region as eachother. The second
+plot (which is basically just a zoomed-out version of the first plot)
+emphasises these four distributions, while also showing a notable second
+group of Extremely Loud glitches that intersect the ‘other’
+distribution. The third plot, however, is arguably the easiest graph to
+tell the different glitch classes apart on so far, with scratchy having
+a nearly-distinct region (although slightly overlapping with Helix and
+Blips), as well as Scattered Light (which has the most overlap with
+Tomtes, surprisingly) and most of the clusters from the
+`peak frequency`-`duration` plot, although seeming to mix up the other
+low-frequency glitches more than the original graph.
