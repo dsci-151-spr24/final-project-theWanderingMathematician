@@ -12,6 +12,7 @@ library(tidyverse)
 library(broom)
 library(scales)
 library(plotly)
+library(nnet)
 ```
 
 ```{r load-data}
@@ -182,7 +183,7 @@ gravity_spy_metadata %>%
 From the first plot, we can see that, while blips, koi fish, and Extremely Loud glitches form visually distinct categories, most of the other glitch classes are in the same region as eachother. The second plot (which is basically just a zoomed-out version of the first plot) emphasises these four distributions, while also showing a notable second group of Extremely Loud glitches that intersect the 'other' distribution.
 The third plot, however, is arguably the easiest graph to tell the different glitch classes apart on so far, with scratchy having a nearly-distinct region (although slightly overlapping with Helix and Blips), as well as Scattered Light (which has the most overlap with Tomtes, surprisingly) and most of the clusters from the `peak frequency`-`duration` plot, although seeming to mix up the other low-frequency glitches more than the original graph. To see whether we can combine all three of these variables into a single plot, we create a 3d visualisation of the data:
 
-```{r}
+```{r 3d-plot}
 gravity_spy_metadata %>%
   filter(duration <= 15) %>%
   plot_ly(x = ~log2(peak_frequency), y = ~duration, z = ~log10(snr), color = ~label, colors = customGlitchColour, size = 1, alpha = 0.3) %>%
@@ -193,3 +194,75 @@ gravity_spy_metadata %>%
 ```
 
 This interactive 3d chart is especially useful here, since we can isolate combinations of glitches and see the differences between them. For example, Blips and Koi fish can be seen to not only have a nearly-quadratic boundary in the `peak_frequency`-`snr` plane, but also that Koi Fish generally have longer durations than blips, sometimes dramatically so.
+
+We also create charts of these three variables plotted against amplitude.
+
+```{r amplitude-plots}
+
+#legend
+gravity_spy_metadata %>%
+  ggplot(aes(y = label, fill = label)) +
+  geom_bar(position = "fill") +
+    theme_minimal() +
+    scale_fill_manual(values = customGlitchColour) +
+  theme(legend.position = "NULL") +
+  labs(title = "Legend", y = "Glitch Class", x = "Colour")
+
+#amplitude by peak frequency
+gravity_spy_metadata %>%
+  ggplot(aes(x = peak_frequency, y = amplitude, colour = label)) +
+    geom_point(size = 0.2) +
+    theme_minimal() +
+    scale_colour_manual(values = customGlitchColour) +
+    theme(legend.position = "NULL") +
+    labs(title = "Glitch classes by peak frequency and amplitude", colour = "Glitch class", x = "Peak frequency (log scale)", y = "Amplitude") +
+    scale_x_continuous(transform = "log2", n.breaks = 10) +
+  scale_y_continuous(transform = "log10", n.breaks = 5)
+
+#amplitude by duration
+gravity_spy_metadata %>%
+  ggplot(aes(x = duration, y = amplitude, colour = label)) +
+    geom_point(size = 0.2) +
+    theme_minimal() +
+    scale_colour_manual(values = customGlitchColour) +
+    theme(legend.position = "NULL") +
+    labs(title = "Glitch classes by amplitude and duration", colour = "Glitch class", x = "Duration", y = "Amplitude") +
+  scale_y_continuous(transform = "log10", n.breaks = 5) +
+  xlim(0, 10)
+
+#amplitude by snr
+gravity_spy_metadata %>%
+  ggplot(aes(x = snr, y = amplitude, colour = label)) +
+    geom_point(size = 0.2) +
+    theme_minimal() +
+    scale_colour_manual(values = customGlitchColour) +
+    theme(legend.position = "NULL") +
+    labs(title = "Glitch classes by signal-noise ratio and amplitude", colour = "Glitch class", x = "Peak SNR", y = "Amplitude") +
+  scale_x_continuous(transform = "log10", n.breaks = 5) +
+  scale_y_continuous(transform = "log10", n.breaks = 5)
+
+```
+
+Here, we won't note specific glitch distributions, but one may notice that the amplitude-to-SNR graph has a linear lower boundary, as well as several diagonal lines running parallel to the boundary. The fact that there is a relation here is unsurprising, as SNR calculation includes the signal's strength; however, the exact relation here is unclear.
+In addition to this, the amplitude-to-peak-frequency graph has a lower boundary with a shape familiar to anyone analysing gravitational-wave data: the ASD-frquency graph of a detector (specifically, the LIGO O1 detectors):
+![ASD-frequency graph](https://gwosc.org/static/speclines/o1/GW150914_ASDs.png)
+(Image from the Gravitational Wave Open Science Center: [https://gwosc.org/o1speclines/](https://gwosc.org/o1speclines/))
+
+That the glitches all occur above this line is unsurprising, as the graph measures the minimum signal necessary at each frequency to detect a signal; glitches therefore must have amplitudes higher than this curve to be directly detected.
+
+## Creating a 'model' for the data
+
+Next, we are going to manually create a 'model' to attempt to predict the glitch type based on these variables, as well as `ifo`, `amplitude`, `phase`, and `central_frequency`. Unlike an actual model, we will not be predicting all values simultaneously, but will have a more complex elimination approach to the data, which we will create manually.
+
+To begin, we create a new dataframe, where we remove the glitches with multiple bliplets with similarities to other glitch classes (`repeating blips` and `light modulation`). We then add a new variable, `predicted_label`, for the predicted glitch classes, and classify all glitches with SNRs higher than 500 as `Extremely Loud`, since this will include all of the high-peak-frequency population of ELs, as well as much of the lower-frequency population, while also excluding as many other glitches as possible. 
+
+```{r snr-split}
+gravity_spy_predictions <- gravity_spy_metadata %>%
+  filter(!(label %in% c("Repeating_Blips", "Light_Modulation"))) %>%
+  mutate(predicted_label = case_when(
+    snr > 500 ~ "Extremely_Loud",
+    TRUE ~ ""
+  ))
+```
+
+Next, we attempt to select the second population of `Extremely_Loud` glitches by noting that they have durations greater than 4s, peak frequencies between 18 and 55Hz, and SNRs over 30.
