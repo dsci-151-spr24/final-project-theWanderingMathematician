@@ -1,0 +1,54 @@
+---
+title: "Analysis of data"
+author: "Micaiah Balonek"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, warning = FALSE, echo = FALSE)
+```
+
+```{r load-packages, message = FALSE}
+library(tidyverse)
+library(plotly)
+```
+
+```{r load-data}
+setwd("/cloud/project/data")
+gravity_spy_metadata <- read_csv("trainingset_v1d1_metadata.csv", show_col_types = FALSE) %>%
+  select(-c(8, 9, 14, 17, 18, 19, 20)) %>%
+  mutate(phase = param_one_value, .keep = "unused")
+
+customGlitchColour <- c("#ff0000", "#ff8800", "#ffff00","#88ff00", "#00ff00", "#00ffff", "#0088ff", "#0000ff", "#8800ff", "#ff00ff", "#ff0088", "#ffffff", "#aaaaaa", "#ff88bb", "#ffbb88", "#ffff88","#bbff88", "#88ffff", "#88bbff", "#8888ff", "#bb88ff", "#ff88ff")
+```
+
+
+```{r freq-dur-snr-plot}
+gravity_spy_metadata %>%
+  filter(duration <= 15) %>%
+  plot_ly(x = ~log2(peak_frequency), y = ~duration, z = ~log10(snr), color = ~label, colors = customGlitchColour, size = 1, alpha = 0.3) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = "log_2(peak frequency)"),
+                     yaxis = list(title = "duration"),
+                     zaxis = list(title = "log_10(snr)")))
+```
+
+```{r freq-dur-amp-plot}
+gravity_spy_metadata %>%
+  filter(duration <= 15) %>%
+  plot_ly(x = ~log2(peak_frequency), y = ~duration, z = ~log10(amplitude), color = ~label, colors = customGlitchColour, size = 1, alpha = 0.3) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = "log_2(peak frequency)"),
+                     yaxis = list(title = "duration"),
+                     zaxis = list(title = "log_10(amplitude)")))
+```
+
+```{r freq-ampl-snr-plot}
+gravity_spy_metadata %>%
+  filter(duration <= 15) %>%
+  plot_ly(x = ~log2(peak_frequency), y = ~log10(amplitude), z = ~log10(snr), color = ~label, colors = customGlitchColour, size = 1, alpha = 0.3) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = "log_2(peak frequency)"),
+                     yaxis = list(title = "log_10(amplitude)"),
+                     zaxis = list(title = "log_10(snr)")))
+```
+

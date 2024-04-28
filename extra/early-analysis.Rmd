@@ -11,8 +11,8 @@ knitr::opts_chunk$set(eval = TRUE, warning = FALSE, echo = FALSE)
 library(tidyverse)
 library(broom)
 library(scales)
-library(plotly)
-library(nnet)
+library(flextable)
+library(tidymodels)
 ```
 
 ```{r load-data}
@@ -181,17 +181,7 @@ gravity_spy_metadata %>%
 ```
 
 From the first plot, we can see that, while blips, koi fish, and Extremely Loud glitches form visually distinct categories, most of the other glitch classes are in the same region as eachother. The second plot (which is basically just a zoomed-out version of the first plot) emphasises these four distributions, while also showing a notable second group of Extremely Loud glitches that intersect the 'other' distribution.
-The third plot, however, is arguably the easiest graph to tell the different glitch classes apart on so far, with scratchy having a nearly-distinct region (although slightly overlapping with Helix and Blips), as well as Scattered Light (which has the most overlap with Tomtes, surprisingly) and most of the clusters from the `peak frequency`-`duration` plot, although seeming to mix up the other low-frequency glitches more than the original graph. To see whether we can combine all three of these variables into a single plot, we create a 3d visualisation of the data:
-
-```{r 3d-plot}
-gravity_spy_metadata %>%
-  filter(duration <= 15) %>%
-  plot_ly(x = ~log2(peak_frequency), y = ~duration, z = ~log10(snr), color = ~label, colors = customGlitchColour, size = 1, alpha = 0.3) %>%
-  add_markers() %>%
-  layout(scene = list(xaxis = list(title = "log_2(peak frequency)"),
-                     yaxis = list(title = "duration"),
-                     zaxis = list(title = "log_10(snr)")))
-```
+The third plot, however, is arguably the easiest graph to tell the different glitch classes apart on so far, with scratchy having a nearly-distinct region (although slightly overlapping with Helix and Blips), as well as Scattered Light (which has the most overlap with Tomtes, surprisingly) and most of the clusters from the `peak frequency`-`duration` plot, although seeming to mix up the other low-frequency glitches more than the original graph. 
 
 This interactive 3d chart is especially useful here, since we can isolate combinations of glitches and see the differences between them. For example, Blips and Koi fish can be seen to not only have a nearly-quadratic boundary in the `peak_frequency`-`snr` plane, but also that Koi Fish generally have longer durations than blips, sometimes dramatically so.
 
@@ -250,19 +240,253 @@ In addition to this, the amplitude-to-peak-frequency graph has a lower boundary 
 
 That the glitches all occur above this line is unsurprising, as the graph measures the minimum signal necessary at each frequency to detect a signal; glitches therefore must have amplitudes higher than this curve to be directly detected.
 
-## Creating a 'model' for the data
+## Creating a model for the data
 
-Next, we are going to manually create a 'model' to attempt to predict the glitch type based on these variables, as well as `ifo`, `amplitude`, `phase`, and `central_frequency`. Unlike an actual model, we will not be predicting all values simultaneously, but will have a more complex elimination approach to the data, which we will create manually.
+Next, we are going to manually create a 'model' to attempt to predict the glitch type based on these variables, as well as `ifo`. Unlike an actual model, we will not be predicting all values simultaneously, but will have a more complex elimination approach to the data, which we will create manually.
 
 To begin, we create a new dataframe, where we remove the glitches with multiple bliplets with similarities to other glitch classes (`repeating blips` and `light modulation`). We then add a new variable, `predicted_label`, for the predicted glitch classes, and classify all glitches with SNRs higher than 500 as `Extremely Loud`, since this will include all of the high-peak-frequency population of ELs, as well as much of the lower-frequency population, while also excluding as many other glitches as possible. 
 
 ```{r snr-split}
-gravity_spy_predictions <- gravity_spy_metadata %>%
-  filter(!(label %in% c("Repeating_Blips", "Light_Modulation"))) %>%
+gravity_spy_predictors <- gravity_spy_metadata %>%
+  filter(!(label %in% c("Repeating_Blips", "Light_Modulation", "None_of_the_Above"))) %>%
   mutate(predicted_label = case_when(
     snr > 500 ~ "Extremely_Loud",
     TRUE ~ ""
   ))
 ```
 
-Next, we attempt to select the second population of `Extremely_Loud` glitches by noting that they have durations greater than 4s, peak frequencies between 18 and 55Hz, and SNRs over 30.
+Next, we remove variables not being used in our analysis of the data.
+
+```{r filter-variables}
+gravity_spy_predictors <- gravity_spy_predictors %>% select(label, snr, amplitude, ifo, peak_frequency, duration, sample_type, predicted_label, gravityspy_id) %>%
+  mutate(peak_frequency_log = log2(peak_frequency), label = as_factor(label), .keep = "unused")
+```
+
+We then create a multinomial model, fit it to the data of the training set, and use the resulting fit to predict the testing dataset. This generates a new list of predictions as to the glitch classes.
+
+```{r model-creation}
+gs_test <- gravity_spy_predictors %>%
+  filter(sample_type != "train")
+gs_train <- gravity_spy_predictors %>%
+  filter(sample_type == "train")
+
+gs_model_fit <- multinom_reg() %>%
+  fit(label ~ snr + amplitude + ifo + peak_frequency_log + duration, data = gs_train)
+
+gs_model_predictions <- gs_model_fit %>%
+  predict(gs_test) %>%
+  bind_cols(gs_test) %>%
+  mutate(predicted_label = .pred_class) %>%
+  select(-.pred_class) %>%
+  mutate(predicted_label = factor(predicted_label, levels = c("1080Lines", "1400Ripples", "Air_Compressor", "Blip", "Chirp", "Extremely_Loud", "Helix", "Koi_Fish", "Light_Modulation", "Low_Frequency_Lines", "Low_Frequency_Burst", "No_Glitch", "None_of_the_Above", "Paired_Doves", "Power_Line", "Repeating_Blips", "Scattered_Light", "Scratchy", "Tomte", "Violin_Mode", "Wandering_Line", "Whistle")))
+```
+
+We then take these predictions and graph them out, in comparison to the initial graph and with the fit data itself.
+
+```{r model-graph}
+gs_model_fit %>%
+  tidy() %>%
+  select(-c(p.value, statistic, std.error)) %>%
+  pivot_wider(names_from = term, values_from = estimate)
+gs_model_predictions %>%
+  mutate(peak_frequency = 2^peak_frequency_log) %>%
+ggplot(aes(y = duration, x = peak_frequency, colour = predicted_label)) +
+    geom_point(size = 0.5) +
+    theme_minimal() +
+    scale_colour_manual(values = c("#ff0000", "#ff8800", "#ffff00","#88ff00", "#00ffff", "#0088ff", "#0000ff", "#ff00ff", "#ff0088", "#ffffff", "#aaaaaa", "#ffbb88", "#bbff88", "#88ffff", "#88bbff", "#8888ff", "#bb88ff", "#ff88ff")) +
+    theme(legend.key.size = unit(0.1, "cm")) +
+    labs(title = "Predicted glitch classes by duration and peak frequency", colour = "Predicted glitch class", x = "Peak frequency (log scale)") +
+    ylim(0, 5) +
+    scale_x_continuous(transform = "log2", n.breaks = 10)
+
+
+  ggplot(gravity_spy_metadata, aes(y = duration, x = peak_frequency, colour = label)) +
+    geom_point(size = 0.2) +
+    theme_minimal() +
+    scale_colour_manual(values = customGlitchColour) +
+    theme(legend.position = "NULL") +
+    labs(title = "Glitch classes by duration and peak frequency", colour = "Glitch class", x = "Peak frequency (log scale)") +
+    ylim(0, 5) +
+    scale_x_continuous(transform = "log2", n.breaks = 10)
+```
+We note that the model refuses to predict 1400 ripples accurately (the only predicted 1400 ripple isn't even *near* 1400Hz) and overpredicting violin modes, as well as not predicting the two glitch types that we filtered out (repeating blips and light modulation), as well as messing with the lower-left area of the graph. 
+However, we note that, visually, the model does *appear* to predict the ranges of scattered light, blips, koi fish, and helices fairly accurately. We now attempt to test the model's predictions. To do this check the generic accuracy of each predicted class and create a confusion matrix for the data.
+
+```{r prediction-test}
+# Create a confusion matrix of the data
+
+gs_model_predictions %>%
+  group_by(label) %>%
+  count(predicted_label) %>%
+  mutate(label = as.character(label), predicted_label = as.character(predicted_label))%>%
+  pivot_wider(names_from = predicted_label, values_from = n, values_fill = 0)  %>%
+  arrange(label) %>%
+  relocate("label", "1080Lines", "Air_Compressor", "Blip", "Extremely_Loud", "Helix", "Koi_Fish", "Low_Frequency_Burst", "Low_Frequency_Lines", "No_Glitch", "Power_Line", "Scattered_Light", "Scratchy", "Tomte", "Violin_Mode", "Wandering_Line", "Whistle") %>%
+  flextable()
+  
+#create a count of the total number of each glitch class that was predicted
+total_pred_count <- gs_test %>%
+  count(label)
+
+gs_model_predictions %>%
+  group_by(label) %>%
+  count(predicted_label) %>%
+  mutate(label = as.character(label), predicted_label = as.character(predicted_label)) %>%
+  mutate(correct = case_when(
+    label == predicted_label ~ n,
+    TRUE ~ 0
+  )) %>%
+  filter(label == predicted_label) %>%
+  select(-c(n, predicted_label)) %>%
+  full_join(total_pred_count, by = "label") %>%
+  mutate(correct = if_else(is.na(correct), 0, correct)/n, .keep = "unused") %>%
+  arrange(label)
+```
+We can see that, while this model predicts several glitch classes accurately, it fails at distinguishing between the high-frequency broadband glitches: 1080 line, 1400 ripple, wandering line, whistle, and violin mode harmonics (which were mostly predicted accurately, but at the cost of predicting many whistles and wandering lines as VMHs as well). It also failed to distinguish the low-mid-frequency glitches: air compressor, lower-frequency blips, tomte, power lines, and scratchy. However, using the naked eye to view a spectrogram, one can easily distinguish between most of these classes, excepting edge cases between blips and tomtes or between air compressors and power lines.
+Most of our manual observations have been predicted, but a few notable exceptions exist: Violin modes come in multiple different frequency bands, and the regression model tried to predict all of them in a single boundary, since they were given as one category. With some manual tweaking, one could easily split this class into multiple predicted classes, which, along with possibly allowing for better predictions of 1400 ripples, would greatly improve the predictions of high-frequency glitches. It also does particularly badly at predicting tomtes, low-frequency lines, and air compressor glitches. Some initial selection could possibly fix the 'air compressor/power line' problem, but wouldn't necessarily help in classifying tomtes. The LFB-LFL distinction is nearly impossible to solve without data on the evolution of the waveform of the glitch over time.
+
+From here, we apply these changes to the initial dataframe, and then reuse the code from the initial model.
+
+```{r new-model}
+gs_predictions2 <- gravity_spy_predictors %>%
+  mutate(label = case_when(
+    label != "Violin_Mode" ~ label,
+    2^peak_frequency_log >= 1750 ~ "VMH_2000",
+    2^peak_frequency_log >= 1250 ~ "VMH_1500",
+    2^peak_frequency_log >= 750 ~ "VMH_1000",
+    TRUE ~ "VMH_500"
+  )) %>% #split Violin Modes
+  mutate(label = factor(label, levels = c("1080Lines", "1400Ripples", "Air_Compressor", "Blip", "Chirp", "Extremely_Loud", "Helix", "Koi_Fish", "Light_Modulation", "Low_Frequency_Lines", "Low_Frequency_Burst", "No_Glitch", "None_of_the_Above", "Paired_Doves", "Power_Line", "Repeating_Blips", "Scattered_Light", "Scratchy", "Tomte", "VMH_500", "VMH_1000", "VMH_1500", "VMH_2000", "Wandering_Line", "Whistle"))) #relevel the label factor
+
+#split data
+gs_test2 <- gs_predictions2 %>%
+  filter(sample_type != "train")
+gs_train2 <- gs_predictions2 %>%
+  filter(sample_type == "train")
+
+#fit model
+gs_model_fit2 <- multinom_reg() %>%
+  fit(label ~ snr + amplitude + ifo + peak_frequency_log + duration, data = gs_train2)
+
+#predict data
+gs_model_predictions2 <- gs_model_fit2 %>%
+  predict(gs_test2) %>%
+  bind_cols(gs_test2) %>%
+  mutate(predicted_label = .pred_class, .keep = "unused") %>%
+  mutate(predicted_label = factor(predicted_label, levels = c("1080Lines", "1400Ripples", "Air_Compressor", "Blip", "Chirp", "Extremely_Loud", "Helix", "Koi_Fish", "Light_Modulation", "Low_Frequency_Lines", "Low_Frequency_Burst", "No_Glitch", "None_of_the_Above", "Paired_Doves", "Power_Line", "Repeating_Blips", "Scattered_Light", "Scratchy", "Tomte", "VMH_500", "VMH_1000", "VMH_1500", "VMH_2000", "Wandering_Line", "Whistle")))
+
+#graph original model data
+gs_model_predictions %>%
+  mutate(peak_frequency = 2^peak_frequency_log) %>%
+ggplot(aes(y = duration, x = peak_frequency, colour = predicted_label)) +
+    geom_point(size = 0.5) +
+    theme_minimal() +
+    scale_colour_manual(values = c("#ff0000", "#ff8800", "#ffff00","#88ff00", "#00ffff", "#0088ff", "#0000ff", "#ff00ff", "#ff0088", "#ffffff", "#aaaaaa", "#ffbb88", "#bbff88", "#88ffff", "#88bbff", "#8888ff", "#bb88ff", "#ff88ff")) +
+    theme(legend.key.size = unit(0.1, "cm")) +
+    labs(title = "Predicted glitch classes by duration and peak frequency", colour = "Predicted glitch class", x = "Peak frequency (log scale)") +
+    ylim(0, 5) +
+    scale_x_continuous(transform = "log2", n.breaks = 10)
+
+#graph current model data
+gs_model_predictions2 %>%
+  mutate(peak_frequency = 2^peak_frequency_log) %>%
+ggplot(aes(y = duration, x = peak_frequency, colour = predicted_label)) +
+    geom_point(size = 0.5) +
+    theme_minimal() +
+    scale_colour_manual(values = c("#ff0000", "#88ff00", "#00ffff", "#0088ff", "#0000ff", "#ff00ff", "#ff0088", "#ffffff", "#aaaaaa", "#ffbb88", "#bbff88", "#88ffff", "#88bbff", "#8888ff", "#8888ff", "#bb88ff", "#ff88ff")) +
+    theme(legend.key.size = unit(0.1, "cm")) +
+    labs(title = "Predicted glitch classes by duration and peak frequency", colour = "Predicted glitch class", x = "Peak frequency (log scale)") +
+    ylim(0, 5) +
+    scale_x_continuous(transform = "log2", n.breaks = 10)
+
+#graph all data
+  ggplot(gravity_spy_metadata, aes(y = duration, x = peak_frequency, colour = label)) +
+    geom_point(size = 0.2) +
+    theme_minimal() +
+    scale_colour_manual(values = customGlitchColour) +
+    theme(legend.position = "NULL") +
+    labs(title = "Glitch classes by duration and peak frequency", colour = "Glitch class", x = "Peak frequency (log scale)") +
+    ylim(0, 5) +
+    scale_x_continuous(transform = "log2", n.breaks = 10)
+  
+#create a confusion matrix of the data
+gs_model_predictions2 %>%
+  group_by(label) %>%
+  count(predicted_label) %>%
+  mutate(label = as.character(label), predicted_label = as.character(predicted_label)) %>%
+  arrange(label) %>%
+  pivot_wider(names_from = predicted_label, values_from = n, values_fill = 0) %>%
+  relocate("label", "1080Lines", "Blip", "Extremely_Loud", "Helix", "Koi_Fish", "Low_Frequency_Burst", "Low_Frequency_Lines", "No_Glitch", "Power_Line", "Scattered_Light", "Scratchy", "Tomte", "VMH_1500", "VMH_2000", "Wandering_Line", "Whistle") %>%
+  flextable()
+  
+#create a count of the total number of each glitch class that was predicted
+total_pred_count2 <- gs_test2 %>%
+  count(label)
+
+gs_model_predictions2 %>%
+  group_by(label) %>%
+  count(predicted_label) %>%
+  mutate(label = as.character(label), predicted_label = as.character(predicted_label)) %>%
+  mutate(correct = case_when(
+    label == predicted_label ~ n,
+    TRUE ~ 0
+  )) %>%
+  filter(label == predicted_label) %>%
+  select(-c(n, predicted_label)) %>%
+  full_join(total_pred_count2, by = "label") %>%
+  mutate(correct = if_else(is.na(correct), 0, correct)/n, .keep = "unused") %>%
+  arrange(label)
+```
+
+Ironically, these changes led to the complete non-prediction of the 'air compressor' and '1400 ripple' classes (although that is probably better than consistently predicting other-class glitches as them, and missing the original glitches). Testing other combinations of the changes we implemented, they also tend to make the rest of the data less accurate as well, meaning that this may be our best bet at predicting the glitch classes. 
+We can see that the overall accuracy of the model has actually decreased. While some glitch classes (1080 Lines, Helixes, LFBs and LFLs, Scattered Light, and Scratchy) have been predicted better, many of the other common classes have been predicted worse: this has actually reduced the accuracy of the high-frequency-glitch predictions (other than 1080 lines), and has also reduced the probabilities of accurately predicting Air Compressors, Blips, Extremely Loud glitches, Koi Fish, Power Lines, and Tomtes. Gnerally, the lower-frequency, lower-energy glitches are the ones that the second model predicts better, while the rest are predicted better by the first model. We now calculate the general accuracy of each model, and graph them to compare the distributions of glitches from one last angle.
+
+```{r model-accuracy-comparison}
+#model 1 accuracy
+gs_model_predictions %>%
+  mutate(label = as.character(label), predicted_label = as.character(predicted_label), correct = if_else(label == predicted_label, "correct", "incorrect")) %>%
+  count(correct)
+
+#model 2 accuracy
+gs_model_predictions2 %>%
+  mutate(label = as.character(label), predicted_label = as.character(predicted_label), correct = if_else(label == predicted_label, "correct", "incorrect")) %>%
+  count(correct)
+
+#actual data
+gs_model_predictions2 %>%
+  ggplot(aes(x = 2^peak_frequency_log, y = amplitude, colour = label)) +
+  theme_minimal() +
+  scale_colour_manual(values = c("#ff0000", "#ff8800", "#ffff00","#88ff00", "#00ff00", "#00ffff", "#0088ff", "#0000ff", "#ff00ff", "#ff0088", "#ffffff", "#ff8888", "#ffbb88","#bbff88", "#88ffff", "#88bbff", "#8888ff", "#8888ff", "#8888ff", "#bb88ff", "#ff88ff")) +
+  geom_point(size = 0.5) +
+  scale_x_continuous(transform = "log2") +
+  scale_y_continuous(transform = "log10") +
+  labs(title = "Glitch classes by amplitude and duration", colour = "Glitch class", x = "Duration", y = "Amplitude")
+
+#model 1
+gs_model_predictions %>%
+  ggplot(aes(x = 2^peak_frequency_log, y = amplitude, colour = predicted_label)) +
+  theme_minimal() +
+  geom_point(size = 0.5) +
+  scale_colour_manual(values = c("#ff0000", "#ffff00", "#88ff00", "#00ffff", "#0088ff", "#0000ff", "#ff00ff", "#ff0088", "#ffffff", "#ffbb88", "#bbff88", "#88ffff", "#88bbff", "#8888ff", "#bb88ff", "#ff88ff")) +
+  scale_x_continuous(transform = "log2") +
+  scale_y_continuous(transform = "log10") +
+  labs(title = "Predicted glitch classes by amplitude and peak frequency", subtitle = "first model", colour = "Predicted glitch class", x = "Duration", y = "Peak Frequency")
+
+gs_model_predictions2 %>%
+  ggplot(aes(x = 2^peak_frequency_log, y = amplitude, colour = predicted_label)) +
+  theme_minimal() +
+  geom_point(size = 0.5) +
+  scale_colour_manual(values = c("#ff0000", "#ff8800", "#88ff00", "#00ffff", "#0088ff", "#0000ff", "#ff00ff", "#ff0088", "#ffffff", "#ffbb88", "#bbff88", "#88ffff", "#88bbff", "#8888ff", "#8888ff", "#bb88ff", "#ff88ff")) +
+  scale_x_continuous(transform = "log2") +
+  scale_y_continuous(transform = "log10") +
+  labs(title = "Predicted glitch classes by amplitude and peak frequency", subtitle = "second model", colour = "Predicted glitch class", x = "Duration", y = "Peak Frequency")
+```
+
+Generally, these two models are equally good, as they both predict between 75% and 80% of the glitches correctly, just with errors collecting in different areas of the glitch hyperspace, so it would probably be better to choose the more simple of the models for the sake of the model not being too complex. 
+This is the best algorithm that we can create based on only the metadata and some simple calculations. Possibilities for future improvements on this model include: 
+- Creating separate models for different parts of the distribution or for different interferometers; the fact that they have different distributions of glitches mean that this is likely to make the model more accurate.
+- Using the time of day or year as a predictor; some glitches have been shown to occur more often at certain times of the day or year.
+- Sub-dividing other glitch classes into seperate populations based on simple divisions in the metadata. We tried this for Violin Mode Harmonics, but it still interfered with the prediction of Whistles and 1400Hz Ripples. This could be fixed by running other glitches through the division algorithm as well, resulting in a better overall fit. This could also be used to possibly allow for predictions of Light Modulation glitches as well.
+- Allowing for more diverse functions in the regression model. Our current regression uses the `nnet::multinom` model, which uses *linear* predictors to predict the data. Using more complex polynomial predictors would create a better approximation of the actual dataforms.
+
+Still, this is a good proof-of-concept for the prospect of predicting glitch class using manually-altered regression models.

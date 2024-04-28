@@ -1,6 +1,6 @@
 ---
-title: Project title
-author: by your name
+title: Developing a model to classify glitches in the aLIGO detectors.
+author: by Micaiah Balonek
 output: github_document
 ---
 
