@@ -1,7 +1,6 @@
 ---
-title: "Presentation title"
-subtitle: "Presentation subtitle (if any)"
-author: "Your Name"
+title: "Predicting Glitch Classes in the LIGO Detectors by Metadata"
+author: "Micaiah Balonek"
 institute: "Houghton University"
 date: "`r Sys.Date()`"
 output:
@@ -35,7 +34,7 @@ knitr::opts_chunk$set(fig.retina = 3, dpi = 300, fig.width = 6, fig.asp = 0.618,
 
 ```{r}
 style_xaringan(
-  title_slide_background_image = "img/confetti.jpg"
+  title_slide_background_image = "img/GW170817-L1.png"
 )
 ```
 
